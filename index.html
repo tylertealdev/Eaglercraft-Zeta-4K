@@ -11,9 +11,21 @@
             color: white;
             text-align: center;
         }
+        canvas {
+            margin: 20px auto;
+            display: block;
+            border: 1px solid white;
+        }
     </style>
   </head>
  <body>
     <script src="classes.js"></script>
+   <script>
+        // Initialize the game when the page is loaded
+        window.addEventListener('load', () => {
+            let app = new M();
+            app.start();
+        });
+    </script>
  </body>
 </html>
