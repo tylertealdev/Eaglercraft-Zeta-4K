@@ -1,16 +1,13 @@
-
-class M {
+class Game {
     constructor() {
-        this.M = new Array(32767).fill(0);
-        this.canvas = document.createElement("canvas");
+        this.isRunning = false;
+        this.player = new Player();
+        this.world = new World();
+        this.canvas = document.createElement('canvas');
         this.canvas.width = 856;
         this.canvas.height = 480;
-        this.ctx = this.canvas.getContext("2d");
+        this.ctx = this.canvas.getContext('2d');
         document.body.appendChild(this.canvas);
-        this.imageData = this.ctx.createImageData(214, 120);
-        this.arrayOfInt1 = new Uint32Array(this.imageData.data.buffer);
-        this.arrayOfInt2 = new Array(262144).fill(0);
-        this.isRunning = false;
     }
 
     start() {
@@ -19,91 +16,26 @@ class M {
     }
 
     run() {
-        let localRandom = Math.random;
-        this.generateArrayOfInt2();
-        this.generateArrayOfInt3();
-
-        let step = () => {
+        const step = () => {
             if (!this.isRunning) return;
-            this.updateGraphics();
-            this.ctx.putImageData(this.imageData, 0, 0);
+
+            this.update();
+            this.render();
             requestAnimationFrame(step);
         };
 
         requestAnimationFrame(step);
     }
 
-    generateArrayOfInt2() {
-        let localRandom = Math.random;
-        for (let i = 0; i < 262144; i++) {
-            this.arrayOfInt2[i] = (i / 64) % 64 > 32 + Math.floor(localRandom() * 8) ? Math.floor(localRandom() * 8) + 1 : 0;
-        }
+    update() {
+        this.player.update();
+        this.world.update();
     }
 
-    generateArrayOfInt3() {
-        let localRandom = Math.random;
-        this.arrayOfInt3 = new Array(12288).fill(0);
-        for (let j = 1; j < 16; j++) {
-            let k = 255 - Math.floor(localRandom() * 96);
-            for (let m = 0; m < 48; m++) {
-                for (let n = 0; n < 16; n++) {
-                    let color = 9858122;
-                    if (j == 4) color = 8355711;
-                    if (j != 4 || Math.floor(localRandom() * 3) == 0) {
-                        k = 255 - Math.floor(localRandom() * 96);
-                    }
-                    if (j == 1 && m < (n * n * 3 + n * 81 >> 2 & 3) + 18) {
-                        color = 6990400;
-                    } else if (j == 1 && m < (n * n * 3 + n * 81 >> 2 & 3) + 19) {
-                        k = (k * 2) / 3;
-                    }
-
-                    this.arrayOfInt3[j * m * n] = color;
-                }
-            }
-        }
-    }
-
-    updateGraphics() {
-        // Update the canvas with some simple pattern for now
-        let width = this.canvas.width;
-        let height = this.canvas.height;
-        for (let i = 0; i < this.arrayOfInt1.length; i++) {
-            let r = Math.floor(Math.random() * 255);
-            let g = Math.floor(Math.random() * 255);
-            let b = Math.floor(Math.random() * 255);
-            this.arrayOfInt1[i] = (r << 16) | (g << 8) | b;
-        }
-    }
-
-    handleEvent(event) {
-        let i = 0;
-        switch (event.type) {
-            case 'keydown':
-                i = 1;
-            case 'keyup':
-                this.M[event.keyCode] = i;
-                break;
-            case 'mousedown':
-                i = 1;
-                this.M[2] = event.clientX;
-                this.M[3] = event.clientY;
-            case 'mouseup':
-                if (event.button === 2) {
-                    this.M[1] = i;
-                } else {
-                    this.M[0] = i;
-                }
-                break;
-            case 'mousemove':
-                this.M[2] = event.clientX;
-                this.M[3] = event.clientY;
-                break;
-            case 'mouseout':
-                this.M[2] = 0;
-                break;
-        }
-        return true;
+    render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.world.render(this.ctx);
+        this.player.render(this.ctx);
     }
 
     stop() {
@@ -111,14 +43,77 @@ class M {
     }
 }
 
+class Player {
+    constructor() {
+        this.x = 400;
+        this.y = 240;
+        this.speed = 2;
+        this.size = 20;
+        this.keys = new Array(256).fill(0); // Keyboard states
+    }
+
+    update() {
+        if (this.keys[37]) this.x -= this.speed;  // Left arrow
+        if (this.keys[39]) this.x += this.speed;  // Right arrow
+        if (this.keys[38]) this.y -= this.speed;  // Up arrow
+        if (this.keys[40]) this.y += this.speed;  // Down arrow
+    }
+
+    render(ctx) {
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+
+    handleInput(event) {
+        let i = event.type === 'keydown' ? 1 : 0;
+        this.keys[event.keyCode] = i;
+    }
+}
+
+class World {
+    constructor() {
+        this.blocks = [];
+        this.generateWorld();
+    }
+
+    generateWorld() {
+        for (let x = 0; x < 20; x++) {
+            for (let y = 0; y < 10; y++) {
+                this.blocks.push(new Block(x * 40, y * 40, 40, 40, 'green'));
+            }
+        }
+    }
+
+    update() {
+        // Update world logic here (e.g., block interactions, physics)
+    }
+
+    render(ctx) {
+        for (let block of this.blocks) {
+            block.render(ctx);
+        }
+    }
+}
+
+class Block {
+    constructor(x, y, width, height, color) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.color = color;
+    }
+
+    render(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+}
+
 window.addEventListener('load', () => {
-    let app = new M();
+    let app = new Game();
     app.start();
 
-    window.addEventListener('keydown', (e) => app.handleEvent(e));
-    window.addEventListener('keyup', (e) => app.handleEvent(e));
-    window.addEventListener('mousedown', (e) => app.handleEvent(e));
-    window.addEventListener('mouseup', (e) => app.handleEvent(e));
-    window.addEventListener('mousemove', (e) => app.handleEvent(e));
-    window.addEventListener('mouseout', (e) => app.handleEvent(e));
+    window.addEventListener('keydown', (e) => app.player.handleInput(e));
+    window.addEventListener('keyup', (e) => app.player.handleInput(e));
 });
