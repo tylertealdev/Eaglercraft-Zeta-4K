@@ -1,119 +1,83 @@
-class Game {
-    constructor() {
-        this.isRunning = false;
-        this.player = new Player();
-        this.world = new World();
-        this.canvas = document.createElement('canvas');
-        this.canvas.width = 856;
-        this.canvas.height = 480;
-        this.ctx = this.canvas.getContext('2d');
-        document.body.appendChild(this.canvas);
-    }
+// Set up the scene, camera, and renderer
+const canvas = document.getElementById('gameCanvas');
+const renderer = new THREE.WebGLRenderer({ canvas });
+renderer.setSize(window.innerWidth, window.innerHeight);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 5, 10);  // Set the initial camera position
 
-    start() {
-        this.isRunning = true;
-        this.run();
-    }
+// Load your custom texture (32x32 .webp)
+const textureLoader = new THREE.TextureLoader();
+const blockTexture = textureLoader.load('https://github.com/tylertealdev/Eaglercraft-Zeta-4K/raw/refs/heads/main/jeee_32x32.webp');  // Load the texture file
 
-    run() {
-        const step = () => {
-            if (!this.isRunning) return;
+// Create a block material with the texture
+const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });
 
-            this.update();
-            this.render();
-            requestAnimationFrame(step);
-        };
-
-        requestAnimationFrame(step);
-    }
-
-    update() {
-        this.player.update();
-        this.world.update();
-    }
-
-    render() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.world.render(this.ctx);
-        this.player.render(this.ctx);
-    }
-
-    stop() {
-        this.isRunning = false;
-    }
+// Create a function to generate blocks (cubes)
+function createBlock(x, y, z) {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const block = new THREE.Mesh(geometry, blockMaterial);
+    block.position.set(x, y, z);
+    return block;
 }
 
-class Player {
-    constructor() {
-        this.x = 400;
-        this.y = 240;
-        this.speed = 2;
-        this.size = 20;
-        this.keys = new Array(256).fill(0); // Keyboard states
-    }
-
-    update() {
-        if (this.keys[37]) this.x -= this.speed;  // Left arrow
-        if (this.keys[39]) this.x += this.speed;  // Right arrow
-        if (this.keys[38]) this.y -= this.speed;  // Up arrow
-        if (this.keys[40]) this.y += this.speed;  // Down arrow
-    }
-
-    render(ctx) {
-        ctx.fillStyle = 'blue';
-        ctx.fillRect(this.x, this.y, this.size, this.size);
-    }
-
-    handleInput(event) {
-        let i = event.type === 'keydown' ? 1 : 0;
-        this.keys[event.keyCode] = i;
-    }
-}
-
-class World {
-    constructor() {
-        this.blocks = [];
-        this.generateWorld();
-    }
-
-    generateWorld() {
-        for (let x = 0; x < 20; x++) {
-            for (let y = 0; y < 10; y++) {
-                this.blocks.push(new Block(x * 40, y * 40, 40, 40, 'green'));
-            }
-        }
-    }
-
-    update() {
-        // Update world logic here (e.g., block interactions, physics)
-    }
-
-    render(ctx) {
-        for (let block of this.blocks) {
-            block.render(ctx);
+// Create a grid of blocks (simple world)
+const world = [];
+for (let x = -5; x < 5; x++) {
+    for (let y = 0; y < 3; y++) {
+        for (let z = -5; z < 5; z++) {
+            const block = createBlock(x, y, z);
+            world.push(block);
+            scene.add(block);
         }
     }
 }
 
-class Block {
-    constructor(x, y, width, height, color) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.color = color;
+// Add a basic directional light
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(5, 5, 5).normalize();
+scene.add(light);
+
+// Set up basic camera movement controls
+let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+window.addEventListener('keydown', (event) => {
+    switch (event.key) {
+        case 'w': moveForward = true; break;
+        case 's': moveBackward = true; break;
+        case 'a': moveLeft = true; break;
+        case 'd': moveRight = true; break;
     }
-
-    render(ctx) {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-    }
-}
-
-window.addEventListener('load', () => {
-    let app = new Game();
-    app.start();
-
-    window.addEventListener('keydown', (e) => app.player.handleInput(e));
-    window.addEventListener('keyup', (e) => app.player.handleInput(e));
 });
+window.addEventListener('keyup', (event) => {
+    switch (event.key) {
+        case 'w': moveForward = false; break;
+        case 's': moveBackward = false; break;
+        case 'a': moveLeft = false; break;
+        case 'd': moveRight = false; break;
+    }
+});
+
+// Adjust camera aspect ratio on window resize
+window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+});
+
+// Basic animation loop to update the camera position and render the scene
+function animate() {
+    requestAnimationFrame(animate);
+
+    // Movement logic (first-person controls)
+    const speed = 0.1;
+    if (moveForward) camera.position.z -= speed;
+    if (moveBackward) camera.position.z += speed;
+    if (moveLeft) camera.position.x -= speed;
+    if (moveRight) camera.position.x += speed;
+
+    // Render the scene
+    renderer.render(scene, camera);
+}
+
+// Start the animation loop
+animate();
